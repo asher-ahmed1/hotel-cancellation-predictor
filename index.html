@@ -1,0 +1,655 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Hotel Cancellation Predictor</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link href="https://fonts.googleapis.com/css2?family=DM+Mono:wght@400;500&family=Syne:wght@400;600;800&display=swap" rel="stylesheet"/>
+<style>
+  :root {
+    --bg:       #0a0b0f;
+    --surface:  #111318;
+    --border:   #1e2128;
+    --border2:  #2a2d38;
+    --text:     #e8eaf0;
+    --muted:    #6b7080;
+    --accent:   #c8f060;
+    --red:      #ff5c5c;
+    --amber:    #ffb830;
+    --green:    #4ddb8c;
+    --font-display: 'Syne', sans-serif;
+    --font-mono:    'DM Mono', monospace;
+  }
+
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* grid background */
+  body::before {
+    content: '';
+    position: fixed;
+    inset: 0;
+    background-image:
+      linear-gradient(rgba(200,240,96,.03) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(200,240,96,.03) 1px, transparent 1px);
+    background-size: 40px 40px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  .wrap {
+    position: relative;
+    z-index: 1;
+    max-width: 960px;
+    margin: 0 auto;
+    padding: 48px 24px 80px;
+  }
+
+  /* ── HEADER ── */
+  header {
+    border-bottom: 1px solid var(--border2);
+    padding-bottom: 32px;
+    margin-bottom: 40px;
+    display: flex;
+    align-items: flex-end;
+    justify-content: space-between;
+    gap: 16px;
+    flex-wrap: wrap;
+  }
+
+  .logo {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 28px;
+    letter-spacing: -0.5px;
+    line-height: 1;
+  }
+  .logo span { color: var(--accent); }
+
+  .badge-row {
+    display: flex;
+    gap: 8px;
+    flex-wrap: wrap;
+  }
+  .badge {
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 4px;
+    border: 1px solid var(--border2);
+    color: var(--muted);
+    background: var(--surface);
+    letter-spacing: .5px;
+  }
+  .badge.live { border-color: var(--accent); color: var(--accent); }
+
+  /* ── STATS ROW ── */
+  .stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 12px;
+    margin-bottom: 36px;
+  }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 16px 20px;
+    transition: border-color .2s;
+  }
+  .stat-card:hover { border-color: var(--border2); }
+  .stat-label { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 6px; }
+  .stat-value { font-family: var(--font-display); font-size: 26px; font-weight: 800; color: var(--accent); }
+
+  /* ── LAYOUT ── */
+  .main-grid {
+    display: grid;
+    grid-template-columns: 1fr 340px;
+    gap: 20px;
+    align-items: start;
+  }
+  @media (max-width: 700px) { .main-grid { grid-template-columns: 1fr; } }
+
+  /* ── FORM ── */
+  .form-panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+  }
+  .panel-header {
+    padding: 14px 20px;
+    border-bottom: 1px solid var(--border);
+    font-family: var(--font-display);
+    font-weight: 600;
+    font-size: 13px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  .dot {
+    width: 6px; height: 6px;
+    border-radius: 50%;
+    background: var(--accent);
+    animation: pulse 2s ease-in-out infinite;
+  }
+  @keyframes pulse { 0%,100%{opacity:1} 50%{opacity:.3} }
+
+  .form-body { padding: 20px; }
+
+  .section-label {
+    font-size: 10px;
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+    color: var(--muted);
+    margin-bottom: 12px;
+    margin-top: 20px;
+    border-top: 1px solid var(--border);
+    padding-top: 16px;
+  }
+  .section-label:first-child { margin-top: 0; border-top: none; padding-top: 0; }
+
+  .field-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 10px;
+  }
+  .field-grid.tri { grid-template-columns: 1fr 1fr 1fr; }
+
+  .field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  label {
+    font-size: 11px;
+    color: var(--muted);
+    letter-spacing: .3px;
+  }
+  input[type=number] {
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    color: var(--text);
+    font-family: var(--font-mono);
+    font-size: 13px;
+    padding: 8px 10px;
+    width: 100%;
+    outline: none;
+    transition: border-color .15s;
+    -moz-appearance: textfield;
+  }
+  input[type=number]::-webkit-inner-spin-button { display: none; }
+  input[type=number]:focus { border-color: var(--accent); }
+
+  /* toggle */
+  .toggle-field {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+  }
+  .toggle-wrap {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 10px;
+    background: var(--bg);
+    border: 1px solid var(--border2);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: border-color .15s;
+  }
+  .toggle-wrap:focus-within { border-color: var(--accent); }
+  .toggle-track {
+    width: 28px; height: 16px;
+    background: var(--border2);
+    border-radius: 8px;
+    position: relative;
+    transition: background .2s;
+    flex-shrink: 0;
+  }
+  .toggle-track input { display: none; }
+  .toggle-thumb {
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 12px; height: 12px;
+    background: var(--muted);
+    border-radius: 50%;
+    transition: transform .2s, background .2s;
+  }
+  .toggle-track input:checked ~ .toggle-thumb { transform: translateX(12px); background: var(--accent); }
+  .toggle-track input:checked { /* hidden */ }
+  .toggle-track:has(input:checked) { background: rgba(200,240,96,.15); }
+  .toggle-text { font-size: 12px; color: var(--text); }
+
+  /* predict btn */
+  .btn-predict {
+    width: 100%;
+    margin-top: 20px;
+    padding: 13px;
+    background: var(--accent);
+    color: var(--bg);
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 14px;
+    letter-spacing: .5px;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: opacity .15s, transform .1s;
+  }
+  .btn-predict:hover  { opacity: .88; }
+  .btn-predict:active { transform: scale(.98); }
+  .btn-predict:disabled { opacity: .4; cursor: not-allowed; }
+
+  /* examples */
+  .examples {
+    margin-top: 12px;
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+  }
+  .ex-btn {
+    font-family: var(--font-mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border: 1px solid var(--border2);
+    border-radius: 4px;
+    background: transparent;
+    color: var(--muted);
+    cursor: pointer;
+    transition: border-color .15s, color .15s;
+  }
+  .ex-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+  /* ── RESULT PANEL ── */
+  .result-panel {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .result-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    overflow: hidden;
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+  }
+
+  .result-body {
+    flex: 1;
+    padding: 28px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    gap: 10px;
+  }
+
+  .idle-text {
+    font-size: 12px;
+    color: var(--muted);
+    line-height: 1.7;
+  }
+
+  .risk-label {
+    font-family: var(--font-display);
+    font-weight: 800;
+    font-size: 32px;
+    letter-spacing: -1px;
+    line-height: 1;
+  }
+  .risk-label.red   { color: var(--red); }
+  .risk-label.amber { color: var(--amber); }
+  .risk-label.green { color: var(--green); }
+
+  .risk-sub {
+    font-size: 11px;
+    color: var(--muted);
+    text-transform: uppercase;
+    letter-spacing: 1.5px;
+  }
+
+  /* probability bar */
+  .prob-row {
+    width: 100%;
+    margin-top: 12px;
+  }
+  .prob-labels {
+    display: flex;
+    justify-content: space-between;
+    font-size: 11px;
+    color: var(--muted);
+    margin-bottom: 5px;
+  }
+  .prob-track {
+    height: 6px;
+    background: var(--border2);
+    border-radius: 3px;
+    overflow: hidden;
+  }
+  .prob-fill {
+    height: 100%;
+    border-radius: 3px;
+    width: 0%;
+    transition: width .6s cubic-bezier(.4,0,.2,1), background .4s;
+  }
+  .prob-fill.red   { background: var(--red); }
+  .prob-fill.amber { background: var(--amber); }
+  .prob-fill.green { background: var(--green); }
+
+  .prob-value {
+    font-family: var(--font-display);
+    font-size: 48px;
+    font-weight: 800;
+    line-height: 1;
+  }
+  .prob-value.red   { color: var(--red); }
+  .prob-value.amber { color: var(--amber); }
+  .prob-value.green { color: var(--green); }
+
+  /* meta info card */
+  .meta-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px 20px;
+  }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 6px 0;
+    border-bottom: 1px solid var(--border);
+    font-size: 12px;
+  }
+  .meta-row:last-child { border-bottom: none; }
+  .meta-key { color: var(--muted); }
+  .meta-val { color: var(--text); font-weight: 500; }
+
+  /* loading spinner */
+  .spinner {
+    width: 28px; height: 28px;
+    border: 2px solid var(--border2);
+    border-top-color: var(--accent);
+    border-radius: 50%;
+    animation: spin .6s linear infinite;
+    display: none;
+    margin: 0 auto;
+  }
+  @keyframes spin { to { transform: rotate(360deg); } }
+  .spinner.show { display: block; }
+
+  /* footer */
+  footer {
+    margin-top: 56px;
+    padding-top: 20px;
+    border-top: 1px solid var(--border);
+    font-size: 11px;
+    color: var(--muted);
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header>
+    <div>
+      <div class="logo">Hotel<span>.</span>Predict</div>
+      <div style="font-size:12px;color:var(--muted);margin-top:6px;">Deep Learning Cancellation Risk Estimator</div>
+    </div>
+    <div class="badge-row">
+      <span class="badge live">● LIVE</span>
+      <span class="badge">Flask + TF</span>
+      <span class="badge">DNN · 4 Layers</span>
+    </div>
+  </header>
+
+  <div class="stats">
+    <div class="stat-card">
+      <div class="stat-label">Test Accuracy</div>
+      <div class="stat-value">{{ accuracy }}%</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">ROC-AUC</div>
+      <div class="stat-value">{{ auc }}</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Architecture</div>
+      <div class="stat-value" style="font-size:18px;padding-top:4px;">256→128→64→32</div>
+    </div>
+    <div class="stat-card">
+      <div class="stat-label">Features</div>
+      <div class="stat-value">14</div>
+    </div>
+  </div>
+
+  <div class="main-grid">
+
+    <!-- ── FORM ── -->
+    <div class="form-panel">
+      <div class="panel-header">
+        <div class="dot"></div>
+        Booking Parameters
+      </div>
+      <div class="form-body">
+
+        <div class="section-label">Booking Info</div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Lead Time (days)</label>
+            <input type="number" id="lead_time" value="50" min="0"/>
+          </div>
+          <div class="field">
+            <label>Avg Daily Rate ($)</label>
+            <input type="number" id="adr" value="100" min="0"/>
+          </div>
+          <div class="field">
+            <label>Total Guests</label>
+            <input type="number" id="total_guests" value="2" min="1"/>
+          </div>
+          <div class="field">
+            <label>Total Nights</label>
+            <input type="number" id="total_nights" value="3" min="1"/>
+          </div>
+        </div>
+
+        <div class="section-label">Guest History</div>
+        <div class="field-grid tri">
+          <div class="field">
+            <label>Prev. Cancellations</label>
+            <input type="number" id="prev_cancel" value="0" min="0"/>
+          </div>
+          <div class="field">
+            <label>Prev. Kept Bookings</label>
+            <input type="number" id="prev_not_canceled" value="0" min="0"/>
+          </div>
+          <div class="field">
+            <label>Booking Changes</label>
+            <input type="number" id="booking_changes" value="0" min="0"/>
+          </div>
+        </div>
+
+        <div class="section-label">Extras</div>
+        <div class="field-grid">
+          <div class="field">
+            <label>Car Parking Spaces</label>
+            <input type="number" id="car_parking" value="0" min="0"/>
+          </div>
+          <div class="field">
+            <label>Special Requests</label>
+            <input type="number" id="special_requests" value="0" min="0"/>
+          </div>
+        </div>
+        <div style="margin-top:10px;">
+          <div class="toggle-field">
+            <label>Repeated Guest</label>
+            <label class="toggle-wrap">
+              <div class="toggle-track">
+                <input type="checkbox" id="is_repeated"/>
+                <span class="toggle-thumb"></span>
+              </div>
+              <span class="toggle-text" id="toggle-label">No</span>
+            </label>
+          </div>
+        </div>
+
+        <button class="btn-predict" id="predictBtn" onclick="predict()">Run Prediction</button>
+
+        <div class="examples">
+          <span style="font-size:11px;color:var(--muted);align-self:center;">Examples:</span>
+          <button class="ex-btn" onclick="loadExample(0)">Low risk</button>
+          <button class="ex-btn" onclick="loadExample(1)">High risk</button>
+          <button class="ex-btn" onclick="loadExample(2)">Medium risk</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ── RESULT ── -->
+    <div class="result-panel">
+      <div class="result-card" id="resultCard">
+        <div class="panel-header">
+          <div class="dot"></div>
+          Risk Assessment
+        </div>
+        <div class="result-body" id="resultBody">
+          <div class="idle-text">
+            Fill in the booking parameters<br/>and click <strong style="color:var(--accent)">Run Prediction</strong><br/>to get the cancellation risk.
+          </div>
+        </div>
+      </div>
+
+      <div class="meta-card">
+        <div class="meta-row">
+          <span class="meta-key">Model</span>
+          <span class="meta-val">Deep MLP (TensorFlow)</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Regularization</span>
+          <span class="meta-val">BatchNorm + Dropout</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Optimizer</span>
+          <span class="meta-val">Adam · lr=1e-3</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Loss</span>
+          <span class="meta-val">Binary Cross-Entropy</span>
+        </div>
+        <div class="meta-row">
+          <span class="meta-key">Threshold</span>
+          <span class="meta-val">≥65% → High · ≥40% → Medium</span>
+        </div>
+      </div>
+    </div>
+
+  </div>
+
+  <footer>
+    <span>DL Lab Final Project &mdash; Hotel Booking Cancellation Predictor</span>
+    <span>Flask &middot; TensorFlow &middot; scikit-learn</span>
+  </footer>
+</div>
+
+<script>
+const examples = [
+  { lead_time:10,  total_guests:4, total_nights:7, prev_cancel:0, prev_not_canceled:3, booking_changes:1, car_parking:1, special_requests:2, adr:200, is_repeated:false },
+  { lead_time:200, total_guests:1, total_nights:1, prev_cancel:3, prev_not_canceled:0, booking_changes:0, car_parking:0, special_requests:0, adr:80,  is_repeated:false },
+  { lead_time:45,  total_guests:2, total_nights:3, prev_cancel:1, prev_not_canceled:1, booking_changes:1, car_parking:0, special_requests:1, adr:130, is_repeated:false },
+];
+
+function loadExample(i) {
+  const e = examples[i];
+  Object.keys(e).forEach(k => {
+    const el = document.getElementById(k);
+    if (!el) return;
+    if (el.type === 'checkbox') { el.checked = e[k]; updateToggle(); }
+    else el.value = e[k];
+  });
+}
+
+document.getElementById('is_repeated').addEventListener('change', updateToggle);
+function updateToggle() {
+  document.getElementById('toggle-label').textContent =
+    document.getElementById('is_repeated').checked ? 'Yes' : 'No';
+}
+
+async function predict() {
+  const btn = document.getElementById('predictBtn');
+  const body = document.getElementById('resultBody');
+  btn.disabled = true;
+  body.innerHTML = '<div class="spinner show"></div>';
+
+  const payload = {
+    lead_time:         +document.getElementById('lead_time').value,
+    total_guests:      +document.getElementById('total_guests').value,
+    total_nights:      +document.getElementById('total_nights').value,
+    prev_cancel:       +document.getElementById('prev_cancel').value,
+    prev_not_canceled: +document.getElementById('prev_not_canceled').value,
+    booking_changes:   +document.getElementById('booking_changes').value,
+    car_parking:       +document.getElementById('car_parking').value,
+    special_requests:  +document.getElementById('special_requests').value,
+    adr:               +document.getElementById('adr').value,
+    is_repeated:       document.getElementById('is_repeated').checked ? 1 : 0,
+  };
+
+  try {
+    const res  = await fetch('/predict', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await res.json();
+    if (data.error) throw new Error(data.error);
+    renderResult(data);
+  } catch(err) {
+    body.innerHTML = `<div class="idle-text" style="color:var(--red)">Error: ${err.message}</div>`;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+function renderResult(d) {
+  const body = document.getElementById('resultBody');
+  body.innerHTML = `
+    <div class="risk-sub">Cancellation Risk</div>
+    <div class="risk-label ${d.color}">${d.risk}</div>
+    <div class="prob-value ${d.color}">${d.cancel_prob}%</div>
+    <div class="prob-row">
+      <div class="prob-labels">
+        <span>Will Stay (${d.stay_prob}%)</span>
+        <span>Will Cancel (${d.cancel_prob}%)</span>
+      </div>
+      <div class="prob-track">
+        <div class="prob-fill ${d.color}" id="probFill"></div>
+      </div>
+    </div>
+  `;
+  requestAnimationFrame(() => {
+    requestAnimationFrame(() => {
+      document.getElementById('probFill').style.width = d.cancel_prob + '%';
+    });
+  });
+}
+</script>
+</body>
+</html>
